@@ -1,6 +1,7 @@
 from flask import Flask, request, make_response
 from authomatic import Authomatic
 from authomatic.adapters import WerkzeugAdapter
+import json
 
 import config
 import utils
@@ -9,7 +10,7 @@ import utils
 app  = Flask(__name__)
 app.debug = True
 auth = Authomatic(config.auth,
-                  utils.generate_oauth_secret()
+                  utils.load_oauth_secret()
                   )
 
 
@@ -18,8 +19,16 @@ def login(provider):
 
     response = make_response()
     
-    app.logger.debug("login: got provider: {}".format(provider))
     result = auth.login(WerkzeugAdapter(request, response), provider)
-    app.logger.debug("login: got result from auth: {}".format(result))
+
+    app.logger.debug("login: got result: {}".format(result))
+
+    if result and result.error:
+        return result.error.message
+
+    if result and result.user:
+        return json.dumps({'name' : result.user.name,
+                           'id' : result.user.id,
+                           'email' : result.user.email})
 
     return response
